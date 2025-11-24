@@ -1,76 +1,60 @@
-# 🍎 Reversed Snake: You Are The Apple
+# **🍎 Reversed Snake: The Swarm**
 
-> **Survival Horror in 8-bit.** The classic Nokia hit, inverted. You control the food, and the Snake is an AI determined to eat you.
+**Survival Horror in 8-bit.** The classic Nokia hit, inverted. You control the food, and the Snake is an AI determined to eat you.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Language](https://img.shields.io/badge/language-JavaScript-yellow.svg)
-![Size](https://img.shields.io/badge/size-2KB-green.svg)
+## **🎮 Play Now**
 
-## 🎮 Overview
+👉 [**Click here to play the live game**](https://imbios.github.io/lab-snake-reverse/)
 
-**Reversed Snake** is a lightweight, single-file browser game built with **Vanilla JavaScript** and **HTML5 Canvas**. 
+## **✨ Overview**
 
-Instead of guiding the snake, you play as the **Apple**. The Snake is controlled by a pathfinding algorithm (A*) that ruthlessly hunts you down. As time passes, the snake grows longer, making the grid increasingly claustrophobic.
+**Reversed Snake** is a lightweight, single-file browser game built with **Vanilla JavaScript** and **HTML5 Canvas**.
 
-## ✨ Features
+Instead of guiding the snake, you play as the **Apple**. The Snake is controlled by a pathfinding algorithm (A\*) that ruthlessly hunts you down. As time passes, the snake grows longer, making the grid increasingly claustrophobic.
 
-* **Inverted Gameplay Loop:** Break the habit of 30 years of gaming—run *away* from the snake!
-* **AI Pathfinding:** The snake uses a custom implementation of the **A* (A-Star) Algorithm** to find the shortest path to the player.
-* **Dynamic Difficulty:** The snake automatically grows every 5 seconds, reducing your safe space.
-* **Visual Effects:** Includes a dynamic "panic" glitch effect when the snake gets too close (Manhattan distance ≤ 1).
-* **Zero Dependencies:** Written in pure JS. No libraries, no frameworks, just one `.html` file.
+**Level 10** features a "Swarm Mode" where you must dodge 10 snakes simultaneously.
 
-## 🕹️ How to Play
+## **🕹️ How to Play**
 
-1.  **Download** the `index.html` file (or clone this repo).
-2.  **Open** the file in any modern web browser.
-3.  **Controls:** Use your **Arrow Keys** (⬆️ ⬇️ ⬅️ ➡️) to move the Red Apple.
-4.  **Objective:** Survive as long as possible. Do not let the Snake's head touch you.
+1. **Desktop:** Use your **Arrow Keys** (⬆️ ⬇️ ⬅️ ➡️) to move the Red Apple.  
+2. **Mobile:** Use the **on-screen joystick** to navigate.  
+3. **Objective:** Survive as long as possible. Do not let any Snake head touch you.
 
-**Strategy Tip:** You are slightly faster than the snake (100ms move speed vs 140ms). Use your speed to bait the snake into knots, but don't get cornered!
+## **🧠 Technical Details**
 
-## 🧠 Technical Details
+### **The AI (A\* Search)**
 
-For developers interested in the code, the logic is contained within a standard HTML structure.
+The snake utilizes a PriorityQueue to calculate the most efficient path to the player's coordinates. To maintain 60FPS with 10 snakes, the game uses a **Collision Grid Cache** (O(1) lookup) instead of checking every snake body segment individually.
 
-### The AI (A* Search)
-The snake doesn't move randomly. It utilizes a `PriorityQueue` to calculate the most efficient path to the player's coordinates:
-
-```javascript
-function findPath(start, goal, snake) {
-  // Manhattan distance heuristic
-  const heuristic = p => p.manhattan(goal);
-  // ... implementation of A* loop
-}
-````
-
-### The Glitch Effect
-
-The game creates a nervous atmosphere using `canvas.translate` offsets when the danger level is high:
-
-```javascript
-const glitching = Date.now() - game.glitchStart < 700;
-if (glitching) {
-    const amp = 20; // Shake amplitude
-    ctx.translate((Math.random() - 0.5) * amp, ...);
+```js
+function findPath(start, goal, snake) {  
+  // Manhattan distance heuristic  
+  const heuristic \= p \=\> p.manhattan(goal);  
+  // ... implementation of A\* loop  
 }
 ```
 
-## 🚀 Installation & Usage
+### **📱 Features**
+
+* **Responsive:** Works on iPhone, Android, and Desktop.  
+* **Zero Dependencies:** Written in pure JS. No libraries, no frameworks, just one .html file.  
+* **High Scores:** Saves your best times for each level to localStorage.
+
+## **🚀 Installation**
 
 No build steps required.
 
-```bash
-# Clone the repository
+```sh
+# Clone the repository  
 git clone https://github.com/ImBIOS/lab-snake-reverse.git
 
-# Navigate to the directory
+# Navigate to directory  
 cd lab-snake-reverse
 
-# Open in browser (Mac example)
+# Open in browser  
 open index.html
 ```
 
-## 🤝 Contributing
+## **📄 License**
 
-Feel free to fork the project and submit a pull request\!
+This project is open source and available under the [MIT License](./LICENSE).

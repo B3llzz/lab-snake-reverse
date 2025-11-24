@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Reversed Snake - You are the Apple</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Reversed Snake - Mobile</title>
 <style>
   body { 
     margin: 0; 
@@ -16,86 +16,151 @@
     color: #fff;
     font-family: monospace;
     overflow: hidden; 
+    touch-action: none; /* Prevent browser zooming/scrolling */
   }
 
-  #game-container {
+  #game-wrapper {
     position: relative;
-    box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
   }
 
   canvas { 
     background: #111; 
     border: 2px solid #333; 
-    display: block;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
     image-rendering: pixelated; 
-    max-width: 100vw;
-    max-height: 100vh;
+    display: block;
   }
 
-  /* GitHub Button Styling */
+  /* --- UI ELEMENTS --- */
+  .ui-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; /* Let clicks pass through to game */
+  }
+
   .github-btn {
     position: absolute;
-    top: 10px;
+    top: max(10px, env(safe-area-inset-top)); /* Notch support */
     right: 10px;
     display: flex;
     align-items: center;
-    background: #24292e;
+    background: rgba(36, 41, 46, 0.8);
     color: white;
     text-decoration: none;
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 6px 12px;
+    border-radius: 20px;
     font-size: 12px;
     font-weight: bold;
     border: 1px solid #444;
-    transition: background 0.2s;
-    z-index: 10;
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
   }
-  .github-btn:hover { background: #444; }
   .github-icon { width: 16px; height: 16px; fill: white; margin-right: 6px; }
-  .star-count { 
-    background: #444; 
-    padding: 2px 6px; 
-    border-radius: 10px; 
-    margin-left: 8px; 
-    font-size: 11px; 
+  
+  /* --- VIRTUAL JOYSTICK --- */
+  #joystick-zone {
+    display: none; /* Hidden on desktop */
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 140px;
+    z-index: 100;
+  }
+  
+  .joystick-base {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    pointer-events: auto; /* Catch touches */
+  }
+
+  .joystick-stick {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 50px;
+    height: 50px;
+    margin-top: -25px;
+    margin-left: -25px;
+    background: rgba(0, 255, 255, 0.5);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    transition: transform 0.1s;
+    pointer-events: none;
   }
 </style>
 </head>
 <body>
 
-<div id="game-container">
-  <a href="#" target="_blank" id="gh-link" class="github-btn">
-    <svg class="github-icon" viewBox="0 0 16 16">
-      <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
-    </svg>
-    <span>GitHub</span>
-    <span id="star-count" class="star-count">0</span>
-  </a>
-  
-  <canvas id="c" width="600" height="600"></canvas>
+<div id="game-wrapper">
+  <canvas id="c"></canvas>
+
+  <div class="ui-layer">
+    <a href="#" target="_blank" id="gh-link" class="github-btn">
+      <svg class="github-icon" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+      </svg>
+      <span>GitHub</span>
+      <span id="star-count" style="margin-left:5px"></span>
+    </a>
+  </div>
+
+  <div id="joystick-zone">
+    <div class="joystick-base"></div>
+    <div class="joystick-stick" id="stick"></div>
+  </div>
 </div>
 
 <script>
 // --- CONFIGURATION ---
 const GITHUB_REPO = "ImBIOS/lab-snake-reverse"; 
-const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
-document.getElementById('gh-link').href = GITHUB_URL;
+document.getElementById('gh-link').href = `https://github.com/${GITHUB_REPO}`;
 
-// Fetch stars (Async - won't block game)
+// Fetch stars
 fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
   .then(res => res.json())
-  .then(data => {
-    if(data.stargazers_count !== undefined) {
-      document.getElementById('star-count').innerText = data.stargazers_count;
-    }
-  })
-  .catch(e => console.log("Repo info skipped"));
+  .then(data => { if(data.stargazers_count) document.getElementById('star-count').innerText = data.stargazers_count; })
+  .catch(() => {});
 
+// --- GAME SETUP ---
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const GRID_SIZE = 30;
-const CELL_SIZE = canvas.width / GRID_SIZE;
+const GRID_SIZE = 30; // 30x30 Grid logic remains constant
+let CELL_SIZE = 20;   // Calculated dynamically
 
+// --- RESPONSIVE RESIZING ---
+function resizeGame() {
+  const maxWidth = window.innerWidth;
+  const maxHeight = window.innerHeight;
+  
+  // Reserve some space for UI/Joystick
+  const isMobile = maxWidth < 768;
+  const availableHeight = isMobile ? maxHeight * 0.70 : maxHeight * 0.95;
+  const availableWidth = maxWidth * 0.95;
+
+  const size = Math.min(availableWidth, availableHeight);
+  
+  // Ensure size aligns with grid to avoid blurring
+  const adjustedSize = Math.floor(size / GRID_SIZE) * GRID_SIZE;
+  
+  canvas.width = adjustedSize;
+  canvas.height = adjustedSize;
+  CELL_SIZE = canvas.width / GRID_SIZE;
+}
+
+window.addEventListener('resize', resizeGame);
+resizeGame(); // Initial call
+
+// --- CLASSES ---
 class Point {
   constructor(x, y) { this.x = x; this.y = y; }
   add(p) { return new Point(this.x + p.x, this.y + p.y); }
@@ -103,10 +168,7 @@ class Point {
   manhattan(p) { return Math.abs(this.x - p.x) + Math.abs(this.y - p.y); }
 }
 
-const DIRECTIONS = [
-  new Point(0, -1), new Point(1, 0),
-  new Point(0, 1), new Point(-1, 0)
-];
+const DIRECTIONS = [ new Point(0, -1), new Point(1, 0), new Point(0, 1), new Point(-1, 0) ];
 
 class PriorityQueue {
   constructor() { this.elements = []; }
@@ -134,10 +196,7 @@ function findPath(start, goal, snake) {
     if (current.equals(goal)) {
       const path = [];
       let cur = current;
-      while (cur) {
-        path.unshift(cur);
-        cur = cameFrom.get(`${cur.x},${cur.y}`);
-      }
+      while (cur) { path.unshift(cur); cur = cameFrom.get(`${cur.x},${cur.y}`); }
       return path;
     }
 
@@ -172,6 +231,7 @@ class Snake {
   grow() { this.growing = true; }
 }
 
+// --- STATE ---
 const game = {
   snake: null,
   apple: null,
@@ -187,12 +247,8 @@ const game = {
   growInterval: null
 };
 
-// SAFE LOCAL STORAGE LOADING
-try {
-  game.highScore = localStorage.getItem('reversedSnakeHighScore') || 0;
-} catch(e) {
-  console.log("Local Storage blocked, high score disabled");
-}
+// Safe LocalStorage
+try { game.highScore = localStorage.getItem('revSnakeHS') || 0; } catch(e) {}
 
 function initApple() {
   let pos;
@@ -202,7 +258,7 @@ function initApple() {
   game.apple = pos;
 }
 
-let animFrameId = null;
+let animFrameId;
 let lastTime = 0;
 
 function resetGame() {
@@ -212,71 +268,87 @@ function resetGame() {
   game.survived = 0;
   game.lastSnake = 0;
   game.lastApple = 0;
-  
   if (game.growInterval) clearInterval(game.growInterval);
   initApple();
   game.growInterval = setInterval(() => game.snake.grow(), 5000);
-
-  // Restart Loop safely
+  
   if (animFrameId) cancelAnimationFrame(animFrameId);
   lastTime = 0;
   animFrameId = requestAnimationFrame(loop);
 }
 
-// Input Handling
+// --- INPUTS & JOYSTICK ---
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
 window.addEventListener('keydown', e => { 
-  if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
-      e.preventDefault();
-  }
-  
-  if ((e.code === 'Space' || e.code === 'Enter') && game.gameOver) {
-    resetGame();
-    return;
-  }
-
+  if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+  if ((e.code === 'Space' || e.code === 'Enter') && game.gameOver) resetGame();
   if (e.key in keys) keys[e.key] = true; 
 });
-
 window.addEventListener('keyup', e => { if (e.key in keys) keys[e.key] = false; });
 
-// --- TOUCH CONTROLS ---
-let touchStartX = 0;
-let touchStartY = 0;
+// Detect Touch Device
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.getElementById('joystick-zone').style.display = 'block';
+  resizeGame(); // Re-trigger resize to account for visual joystick
+}
 
-canvas.addEventListener('touchstart', function(e) {
-  touchStartX = e.changedTouches[0].screenX;
-  touchStartY = e.changedTouches[0].screenY;
-  if (game.gameOver) { resetGame(); }
+// Joystick Logic
+const joystickZone = document.querySelector('.joystick-base');
+const stick = document.getElementById('stick');
+let jActive = false;
+
+joystickZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  jActive = true;
+  handleJoystick(e.changedTouches[0]);
+  if (game.gameOver) resetGame();
 }, {passive: false});
 
-canvas.addEventListener('touchmove', function(e) {
+joystickZone.addEventListener('touchmove', e => {
+  if (!jActive) return;
   e.preventDefault();
-  const touchEndX = e.changedTouches[0].screenX;
-  const touchEndY = e.changedTouches[0].screenY;
-  const dx = touchEndX - touchStartX;
-  const dy = touchEndY - touchStartY;
+  handleJoystick(e.changedTouches[0]);
+}, {passive: false});
+
+const endJoystick = (e) => {
+  jActive = false;
+  stick.style.transform = `translate(0px, 0px)`;
+  Object.keys(keys).forEach(k => keys[k] = false);
+};
+joystickZone.addEventListener('touchend', endJoystick);
+joystickZone.addEventListener('touchcancel', endJoystick);
+
+function handleJoystick(touch) {
+  const rect = joystickZone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
   
+  const x = touch.clientX - centerX;
+  const y = touch.clientY - centerY;
+  
+  // Visual limit
+  const dist = Math.min(35, Math.sqrt(x*x + y*y));
+  const angle = Math.atan2(y, x);
+  const moveX = Math.cos(angle) * dist;
+  const moveY = Math.sin(angle) * dist;
+  
+  stick.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+  // Input Mapping (Directional)
   Object.keys(keys).forEach(k => keys[k] = false);
   
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (Math.abs(dx) > 10) { 
-      if (dx > 0) keys.ArrowRight = true;
+  // Deadzone of 10px
+  if (dist > 10) {
+    if (Math.abs(x) > Math.abs(y)) {
+      if (x > 0) keys.ArrowRight = true;
       else keys.ArrowLeft = true;
-    }
-  } else {
-    if (Math.abs(dy) > 10) {
-      if (dy > 0) keys.ArrowDown = true;
+    } else {
+      if (y > 0) keys.ArrowDown = true;
       else keys.ArrowUp = true;
     }
   }
-}, {passive: false});
-
-canvas.addEventListener('touchend', function(e) {
-  Object.keys(keys).forEach(k => keys[k] = false);
-});
-
+}
 
 function getInputDir() {
   let dx = 0, dy = 0;
@@ -287,6 +359,7 @@ function getInputDir() {
   return (dx || dy) ? new Point(dx, dy) : null;
 }
 
+// --- LOGIC ---
 function checkClose() {
   const min = Math.min(...game.snake.body.map(s => s.manhattan(game.apple)));
   if (min <= 1) game.glitchStart = Date.now();
@@ -296,30 +369,27 @@ function gameOverFunc() {
   game.gameOver = true;
   clearInterval(game.growInterval);
   game.survived = (Date.now() - game.startTime) / 1000;
-  
   if (game.survived > game.highScore) {
     game.highScore = game.survived;
-    try {
-      localStorage.setItem('reversedSnakeHighScore', game.highScore);
-    } catch(e) {}
+    try { localStorage.setItem('revSnakeHS', game.highScore); } catch(e){}
   }
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+  
   const glitching = Date.now() - game.glitchStart < 700;
   if (glitching) {
     ctx.save();
-    const amp = 20;
+    const amp = CELL_SIZE * 0.5;
     ctx.translate((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp);
   }
 
-  // background
+  // Grid BG
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Subtle grid
+  
+  // Faint Grid Lines
   ctx.strokeStyle = '#1a1a1a';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -329,60 +399,59 @@ function draw() {
   }
   ctx.stroke();
 
-  // snake
+  // Draw Entities
   if (game.snake) {
     game.snake.body.forEach((seg, i) => {
       ctx.fillStyle = i === 0 ? '#0ff' : '#0a0';
-      ctx.fillRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+      ctx.fillRect(seg.x * CELL_SIZE + 1, seg.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     });
   }
-
-  // apple
   if (game.apple) {
     ctx.fillStyle = '#f33';
     ctx.beginPath();
-    ctx.arc((game.apple.x + 0.5) * CELL_SIZE, (game.apple.y + 0.5) * CELL_SIZE, CELL_SIZE * 0.4, 0, Math.PI * 2);
+    ctx.arc((game.apple.x + 0.5) * CELL_SIZE, (game.apple.y + 0.5) * CELL_SIZE, CELL_SIZE * 0.35, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // UI
+  // Text UI (Scaled)
+  const fontSize = Math.max(12, Math.floor(CELL_SIZE * 0.8));
   const time = game.gameOver ? game.survived : (Date.now() - game.startTime) / 1000;
+  
   ctx.fillStyle = '#fff';
-  ctx.textAlign = 'left'; // Reset alignment
-  ctx.font = '20px monospace';
-  ctx.fillText(`Time: ${time.toFixed(1)}s`, 10, 30);
-  ctx.fillText(`High Score: ${Number(game.highScore).toFixed(1)}s`, 10, 60);
-  ctx.fillText(`Length: ${game.snake ? game.snake.body.length : 0}`, 10, 90);
+  ctx.font = `${fontSize}px monospace`;
+  ctx.fillText(`Time: ${time.toFixed(1)}s`, 10, fontSize + 5);
+  ctx.fillText(`Best: ${Number(game.highScore).toFixed(1)}s`, 10, (fontSize * 2) + 10);
 
   if (game.gameOver) {
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     ctx.shadowColor = "#f00";
     ctx.shadowBlur = 20;
-    ctx.font = '60px monospace';
     ctx.fillStyle = '#f00';
     ctx.textAlign = "center";
+    
+    const bigFont = Math.floor(canvas.width / 10);
+    ctx.font = `${bigFont}px monospace`;
     ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
     
     ctx.shadowBlur = 0;
-    ctx.font = '20px monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText(`You survived ${time.toFixed(1)}s`, canvas.width/2, canvas.height/2 + 30);
+    ctx.font = `${fontSize * 1.5}px monospace`;
+    ctx.fillText(`You lasted ${time.toFixed(1)}s`, canvas.width/2, canvas.height/2 + bigFont);
     
     ctx.fillStyle = '#aaa';
-    ctx.font = '16px monospace';
-    ctx.fillText('Press SPACE or Tap to Restart', canvas.width/2, canvas.height/2 + 60);
+    ctx.font = `${fontSize}px monospace`;
+    ctx.fillText('Tap to Restart', canvas.width/2, canvas.height/2 + bigFont * 1.8);
     ctx.restore();
   }
-
+  
   if (glitching) ctx.restore();
 }
 
 function loop(t) {
   animFrameId = requestAnimationFrame(loop);
-  
   if (!lastTime) { lastTime = t; return; }
   const delta = t - lastTime;
   lastTime = t;
@@ -391,22 +460,17 @@ function loop(t) {
     game.lastSnake += delta;
     game.lastApple += delta;
 
-    // Snake move logic
     if (game.lastSnake >= game.snakeSpeed) {
       const path = findPath(game.snake.head, game.apple, game.snake);
       let nextDir = null;
-
       if (path && path.length > 1) {
         nextDir = new Point(path[1].x - game.snake.head.x, path[1].y - game.snake.head.y);
       } else {
-        // Trapped logic
         if (game.snake.body.length > 8) game.snake.body.pop();
-
         const candidates = DIRECTIONS.filter(d => {
           const np = game.snake.head.add(d);
           if (np.x < 0 || np.x >= GRID_SIZE || np.y < 0 || np.y >= GRID_SIZE) return false;
-          const tail = game.snake.tail;
-          return !game.snake.body.some(s => s.equals(np)) || np.equals(tail);
+          return !game.snake.body.some(s => s.equals(np)) || np.equals(game.snake.tail);
         });
         if (candidates.length) {
           candidates.sort((a, b) => game.apple.manhattan(game.snake.head.add(a)) - game.apple.manhattan(game.snake.head.add(b)));
@@ -416,7 +480,7 @@ function loop(t) {
 
       if (nextDir) {
         const newHead = game.snake.head.add(nextDir);
-        if (newHead.equals(game.apple)) { gameOverFunc(); }
+        if (newHead.equals(game.apple)) gameOverFunc();
         else {
           game.snake.body.unshift(newHead);
           if (!game.snake.growing) game.snake.body.pop();
@@ -427,13 +491,11 @@ function loop(t) {
       checkClose();
     }
 
-    // Apple move logic
     if (game.lastApple >= game.appleSpeed) {
       const dir = getInputDir();
       if (dir) {
         const np = game.apple.add(dir);
-        if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE &&
-            !game.snake.body.some(s => s.equals(np))) {
+        if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE && !game.snake.body.some(s => s.equals(np))) {
           game.apple = np;
           checkClose();
         }
@@ -441,11 +503,9 @@ function loop(t) {
       game.lastApple -= game.appleSpeed;
     }
   }
-
   draw();
 }
 
-// Start Game
 resetGame();
 </script>
 </body>

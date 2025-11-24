@@ -112,15 +112,32 @@
     background: rgba(36, 41, 46, 0.8);
     color: white;
     text-decoration: none;
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 4px 8px; /* Adjusted padding */
+    border-radius: 4px; /* More block-like for github style */
     font-size: 12px;
     font-weight: bold;
     border: 1px solid #444;
     z-index: 30;
     backdrop-filter: blur(4px);
   }
-  .github-icon { width: 16px; height: 16px; fill: white; margin-right: 6px; }
+  .github-icon { 
+    width: 16px; 
+    height: 16px; 
+    fill: white; 
+    margin-right: 4px; /* Less margin for count structure */
+  }
+  .star-count {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    margin-left: 6px;
+    border-radius: 10px; 
+    font-weight: normal;
+    font-size: 0.9em;
+    min-width: 25px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
 
   /* Joystick */
   #joystick-zone {
@@ -158,12 +175,13 @@
 <div id="game-wrapper">
   <canvas id="c"></canvas>
 
-  <!-- GitHub Link -->
+  <!-- GitHub Link with Star Count Placeholder -->
   <a href="#" target="_blank" id="gh-link" class="github-btn">
     <svg class="github-icon" viewBox="0 0 16 16">
       <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
     </svg>
-    <span>GitHub</span>
+    <span>Star</span>
+    <span id="star-count" class="star-count">1.4k</span> <!-- Placeholder count -->
   </a>
 
   <!-- HUD -->
@@ -245,84 +263,86 @@ class PriorityQueue {
   isEmpty() { return this.elements.length === 0; }
 }
 
-// Check if a point is blocked by ANY snake or walls
-function isBlocked(p, snakes) {
-  if (p.x < 0 || p.x >= GRID_SIZE || p.y < 0 || p.y >= GRID_SIZE) return true;
-  // Check all snakes
+// OPTIMIZATION: Global Grid Map for O(1) collision checks
+let collisionGrid = new Array(GRID_SIZE * GRID_SIZE).fill(false);
+
+function buildCollisionGrid(snakes) {
+  collisionGrid.fill(false);
   for (let s of snakes) {
-    // Treat body as wall
-    if (s.body.some(bp => bp.equals(p) && !bp.equals(s.tail))) return true;
+    for (let bp of s.body) {
+      if (bp.x >= 0 && bp.x < GRID_SIZE && bp.y >= 0 && bp.y < GRID_SIZE) {
+        collisionGrid[bp.y * GRID_SIZE + bp.x] = true;
+      }
+    }
   }
-  return false;
 }
 
-function findPath(start, goal, currentSnake, allSnakes) {
+function isBlockedFast(x, y) {
+  if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return true;
+  return collisionGrid[y * GRID_SIZE + x];
+}
+
+function findPath(start, goal, currentSnake) {
   const heuristic = p => p.manhattan(goal);
   const pq = new PriorityQueue();
   const cameFrom = new Map();
   const cost = new Map();
-  const startKey = `${start.x},${start.y}`;
+  const startKey = (start.y * GRID_SIZE + start.x);
 
   pq.enqueue(start, heuristic(start));
   cameFrom.set(startKey, null);
   cost.set(startKey, 0);
 
   let iterations = 0;
-  // Optimization: Limit A* depth for performance with 10 snakes
-  const MAX_ITERATIONS = 400; 
+  // Reduced iterations to ensure frame rate stability with multiple snakes
+  const MAX_ITERATIONS = 200; 
+
+  // Temporarily unmark OWN tail so we can follow it (standard Snake logic)
+  // Optimization: Just ignoring this makes AI slightly dumber but way faster. 
+  // We will stick to strict blocked checks for Level 10 performance.
 
   while (!pq.isEmpty()) {
     iterations++;
-    if (iterations > MAX_ITERATIONS) break; // Fallback if path too complex
+    if (iterations > MAX_ITERATIONS) break;
 
     const current = pq.dequeue();
     if (current.equals(goal)) {
       const path = [];
       let cur = current;
-      while (cur) { path.unshift(cur); cur = cameFrom.get(`${cur.x},${cur.y}`); }
+      while (cur) { 
+        path.unshift(cur); 
+        const key = (cur.y * GRID_SIZE + cur.x);
+        cur = cameFrom.get(key); 
+      }
       return path;
     }
 
     for (const dir of DIRECTIONS) {
       const next = current.add(dir);
       
-      // Collision Check
-      if (next.x < 0 || next.x >= GRID_SIZE || next.y < 0 || next.y >= GRID_SIZE) continue;
-      
-      let blocked = false;
-      // Check against ALL snakes
-      for (let s of allSnakes) {
-        // Allow moving into OWN tail (it will move)
-        // Treat OTHER snakes as solid walls
-        const ignoreTail = (s === currentSnake);
-        if (s.body.some(bp => bp.equals(next) && (ignoreTail ? !bp.equals(s.tail) : true))) {
-          blocked = true;
-          break;
-        }
-      }
-      if (blocked) continue;
+      // OPTIMIZED CHECK: O(1) Lookup instead of O(N*L) loop
+      if (isBlockedFast(next.x, next.y)) continue;
 
-      const newCost = cost.get(`${current.x},${current.y}`) + 1;
-      const key = `${next.x},${next.y}`;
-      if (!cost.has(key) || newCost < cost.get(key)) {
-        cost.set(key, newCost);
+      const nextKey = (next.y * GRID_SIZE + next.x);
+      const newCost = cost.get(startKey) + 1; // Simplified cost
+      
+      if (!cost.has(nextKey) || newCost < cost.get(nextKey)) {
+        cost.set(nextKey, newCost);
         pq.enqueue(next, newCost + heuristic(next));
-        cameFrom.set(key, current);
+        cameFrom.set(nextKey, current);
       }
     }
   }
-  return null; // No path found
+  return null;
 }
 
 class Snake {
   constructor(index) {
     this.body = [];
-    this.color = index === 0 ? '#0f0' : (index % 2 === 0 ? '#0c0' : '#0a0'); // Slight color var
+    this.color = index === 0 ? '#0f0' : (index % 2 === 0 ? '#0c0' : '#0a0'); 
     this.growing = false;
-    // Spawn logic to avoid stacking (simple offset)
     const cx = Math.floor(GRID_SIZE / 2);
     const cy = Math.floor(GRID_SIZE / 2);
-    // Spread start positions
     const startX = Math.max(2, Math.min(GRID_SIZE-2, cx + (Math.floor(Math.random()*10) - 5)));
     const startY = Math.max(2, Math.min(GRID_SIZE-2, cy + (Math.floor(Math.random()*10) - 5)));
     
@@ -377,8 +397,8 @@ function showMainMenu() {
   document.getElementById('menu-screen').classList.remove('hidden');
   document.getElementById('game-over-screen').classList.add('hidden');
   document.getElementById('hud').classList.add('hidden');
-  document.getElementById('joystick-zone').style.display = 'none'; // Hide joystick in menu
-  generateMenu(); // Update scores
+  document.getElementById('joystick-zone').style.display = 'none'; 
+  generateMenu(); 
 }
 
 function startLevel(lvl) {
@@ -390,30 +410,25 @@ function startLevel(lvl) {
   game.lastSnake = 0;
   game.lastApple = 0;
   
-  // UI
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('game-over-screen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
   document.getElementById('hud-level').innerText = `LVL ${lvl}`;
   
-  // Joystick visibility check
   if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     document.getElementById('joystick-zone').style.display = 'block';
   }
 
-  // Create Player (Apple) First
   game.apple = new Point(Math.floor(Math.random() * GRID_SIZE), Math.floor(Math.random() * GRID_SIZE));
 
-  // Create Snakes based on Level
   for(let i=0; i<lvl; i++) {
     game.snakes.push(new Snake(i));
   }
 
-  // Clear timers
   if (game.growInterval) clearInterval(game.growInterval);
   game.growInterval = setInterval(() => {
     game.snakes.forEach(s => s.grow());
-  }, 5000); // Snakes grow every 5s
+  }, 5000); 
 
   loop(0);
 }
@@ -443,13 +458,11 @@ function gameOverFunc() {
   clearInterval(game.growInterval);
   game.survived = (Date.now() - game.startTime) / 1000;
   
-  // Save Score
   const currentBest = parseFloat(getHighScore(game.level));
   if (game.survived > currentBest) {
     setHighScore(game.level, game.survived);
   }
 
-  // Show Screen
   document.getElementById('go-stats').innerHTML = `Survived: ${game.survived.toFixed(1)}s<br>Best (Lvl ${game.level}): ${Math.max(game.survived, currentBest).toFixed(1)}s`;
   document.getElementById('game-over-screen').classList.remove('hidden');
   document.getElementById('joystick-zone').style.display = 'none';
@@ -459,7 +472,6 @@ function gameOverFunc() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Glitch Effect
   const glitching = Date.now() - game.glitchStart < 700;
   if (glitching) {
     ctx.save();
@@ -467,11 +479,9 @@ function draw() {
     ctx.translate((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp);
   }
 
-  // BG
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Grid
   ctx.strokeStyle = '#1a1a1a';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -481,15 +491,13 @@ function draw() {
   }
   ctx.stroke();
 
-  // Snakes
   game.snakes.forEach(snake => {
     snake.body.forEach((seg, i) => {
-      ctx.fillStyle = i === 0 ? '#0ff' : snake.color; // Head is Cyan, Body Green
+      ctx.fillStyle = i === 0 ? '#0ff' : snake.color; 
       ctx.fillRect(seg.x * CELL_SIZE + 1, seg.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     });
   });
 
-  // Apple
   if (game.apple) {
     ctx.fillStyle = '#f33';
     ctx.beginPath();
@@ -501,7 +509,6 @@ function draw() {
     ctx.shadowBlur = 0;
   }
 
-  // HUD Update
   if (game.state === STATE.PLAYING) {
     const t = (Date.now() - game.startTime) / 1000;
     document.getElementById('hud-time').innerText = t.toFixed(1) + 's';
@@ -515,27 +522,33 @@ let animFrameId;
 let lastTime = 0;
 
 function loop(t) {
-  if (game.state !== STATE.PLAYING && game.state !== STATE.GAMEOVER) return; // Stop loop if in menu
+  if (game.state !== STATE.PLAYING && game.state !== STATE.GAMEOVER) return; 
   animFrameId = requestAnimationFrame(loop);
   
   if (!lastTime) { lastTime = t; return; }
-  const delta = t - lastTime;
+  let delta = t - lastTime;
   lastTime = t;
+
+  // LAG PREVENTION: Cap delta to prevent spiral of death
+  // If browser hangs for 1s, don't try to simulate 1s of gameplay instantly
+  if (delta > 200) delta = 200; 
 
   if (game.state === STATE.PLAYING) {
     game.lastSnake += delta;
     game.lastApple += delta;
 
-    // --- SNAKE LOGIC (SWARM) ---
     if (game.lastSnake >= game.snakeSpeed) {
       let closeThreat = false;
 
-      // Process each snake sequentially
+      // 1. Build Grid Map ONCE per tick (O(N*L))
+      buildCollisionGrid(game.snakes);
+
+      // 2. Process each snake
       for (let i = 0; i < game.snakes.length; i++) {
         const s = game.snakes[i];
         
-        // Find path considering ALL snakes as obstacles
-        const path = findPath(s.head, game.apple, s, game.snakes);
+        // 3. A* using Grid Map (O(1) collision checks)
+        const path = findPath(s.head, game.apple, s);
         let nextDir = null;
 
         if (path && path.length > 1) {
@@ -544,7 +557,7 @@ function loop(t) {
           // Fallback: Greedy
           const candidates = DIRECTIONS.filter(d => {
             const np = s.head.add(d);
-            return !isBlocked(np, game.snakes); // Use global block check
+            return !isBlockedFast(np.x, np.y); 
           });
           if (candidates.length) {
             candidates.sort((a, b) => game.apple.manhattan(s.head.add(a)) - game.apple.manhattan(s.head.add(b)));
@@ -555,39 +568,32 @@ function loop(t) {
         if (nextDir) {
           const newHead = s.head.add(nextDir);
           
-          // Collision with Player
           if (newHead.equals(game.apple)) {
             gameOverFunc();
             return;
           }
 
-          // Move
           s.body.unshift(newHead);
           if (!s.growing) s.body.pop();
           else s.growing = false;
         }
 
-        // Check proximity for glitch effect
         if (s.head.manhattan(game.apple) <= 2) closeThreat = true;
       }
       
       if (closeThreat) game.glitchStart = Date.now();
-      game.lastSnake = 0; // Reset tick
+      game.lastSnake -= game.snakeSpeed; // Subtract correctly to maintain pace
     }
 
-    // --- PLAYER LOGIC ---
     if (game.lastApple >= game.appleSpeed) {
       const dir = getInputDir();
       if (dir) {
         const np = game.apple.add(dir);
-        // Valid Move Check
         if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE) {
-           // Don't run into snakes
-           let suicide = false;
-           for(let s of game.snakes) {
-             if (s.body.some(bp => bp.equals(np))) suicide = true;
+           // Simple collision check for player against map is sufficient
+           if (!isBlockedFast(np.x, np.y)) {
+              game.apple = np;
            }
-           if(!suicide) game.apple = np;
         }
       }
       game.lastApple -= game.appleSpeed;
@@ -625,7 +631,6 @@ function handleJoystick(touch) {
   }
 }
 
-// Start
 showMainMenu();
 </script>
 </body>

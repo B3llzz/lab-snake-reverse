@@ -2,8 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Viewport for Mobile Optimization -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Reversed Snake: The Swarm</title>
+
+<!-- --- SEO: PRIMARY METADATA --- -->
+<title>Reversed Snake - Play as the Apple | Hard Survival AI Game</title>
+<meta name="description" content="Play Reversed Snake, the twist on the classic retro game where YOU are the apple. Survive against AI snakes using A* pathfinding. Free browser game, no install required.">
+<meta name="keywords" content="reversed snake, play as apple, snake game AI, hard snake game, A* algorithm game, browser game, html5 game, survival game, impossible snake">
+<meta name="author" content="ImBIOS">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://imbios.github.io/lab-snake-reverse/" />
+
+<!-- --- SEO: OPEN GRAPH (Facebook/Discord/LinkedIn) --- -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://imbios.github.io/lab-snake-reverse/">
+<meta property="og:title" content="Reversed Snake: The Swarm">
+<meta property="og:description" content="Run for your life. You are the apple, and the snakes are hunting you. Can you survive Level 10?">
+<meta property="og:image" content="https://repository-images.githubusercontent.com/placeholder-image.png">
+
+<!-- --- SEO: TWITTER CARDS --- -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Reversed Snake - You are the Apple">
+<meta name="twitter:description" content="The classic game inverted. Evade the AI swarm in this intense survival browser game.">
+<meta name="twitter:image" content="https://repository-images.githubusercontent.com/placeholder-image.png">
+
+<!-- --- SEO: STRUCTURED DATA (JSON-LD) --- -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Reversed Snake",
+  "description": "A browser-based survival game where the player controls an apple evading AI-controlled snakes utilizing A* pathfinding algorithms.",
+  "genre": ["Arcade", "Survival", "Puzzle"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Browser Game",
+  "operatingSystem": "Any",
+  "author": {
+    "@type": "Person",
+    "name": "ImBIOS"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "category": "free"
+  }
+}
+</script>
+
 <style>
   :root {
     --bg-color: #050505;
@@ -55,13 +101,19 @@
     background: var(--ui-bg);
     z-index: 20;
     transition: opacity 0.3s;
+    overflow-y: auto; /* Allow scrolling for SEO content on small screens */
+    padding: 20px;
+    box-sizing: border-box;
   }
 
   .hidden { opacity: 0; pointer-events: none; z-index: -1; }
 
   h1 { font-size: 2.5rem; text-shadow: 0 0 10px var(--term-green); color: var(--term-green); margin-bottom: 10px; text-align: center; }
   h2 { font-size: 2rem; color: var(--term-red); text-shadow: 0 0 10px var(--term-red); margin: 0 0 20px 0; }
-  p { margin: 5px 0 20px 0; color: #aaa; text-align: center; max-width: 300px; line-height: 1.4; }
+  
+  /* SEO Optimized Text Blocks */
+  .intro-text { margin: 5px 0 20px 0; color: #fff; text-align: center; max-width: 500px; line-height: 1.5; font-size: 1.1rem; }
+  .seo-footer { margin-top: 30px; color: #666; font-size: 0.8rem; max-width: 600px; text-align: center; line-height: 1.4; border-top: 1px solid #333; padding-top: 20px; }
 
   /* Level Grid */
   .level-grid {
@@ -69,6 +121,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
     max-width: 300px;
+    margin-bottom: 20px;
   }
 
   .btn {
@@ -112,8 +165,8 @@
     background: rgba(36, 41, 46, 0.8);
     color: white;
     text-decoration: none;
-    padding: 4px 8px; /* Adjusted padding */
-    border-radius: 4px; /* More block-like for github style */
+    padding: 4px 8px;
+    border-radius: 4px;
     font-size: 12px;
     font-weight: bold;
     border: 1px solid #444;
@@ -124,7 +177,7 @@
     width: 16px; 
     height: 16px; 
     fill: white; 
-    margin-right: 4px; /* Less margin for count structure */
+    margin-right: 4px;
   }
   .star-count {
     background-color: rgba(255, 255, 255, 0.1);
@@ -137,7 +190,6 @@
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-
 
   /* Joystick */
   #joystick-zone {
@@ -167,7 +219,6 @@
     transition: transform 0.1s;
     pointer-events: none;
   }
-
 </style>
 </head>
 <body>
@@ -175,8 +226,7 @@
 <div id="game-wrapper">
   <canvas id="c"></canvas>
 
-  <!-- GitHub Link with Star Count Placeholder -->
-  <a href="#" target="_blank" id="gh-link" class="github-btn">
+  <a href="#" target="_blank" id="gh-link" class="github-btn" rel="noopener noreferrer" aria-label="View Source on GitHub">
     <svg class="github-icon" viewBox="0 0 16 16">
       <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
     </svg>
@@ -184,32 +234,47 @@
     <span id="star-count" class="star-count">...</span> 
   </a>
 
-  <!-- HUD -->
   <div id="hud" class="hidden">
     <div id="hud-level">LVL 1</div>
     <div id="hud-time">0.0s</div>
   </div>
 
-  <!-- MAIN MENU -->
-  <div id="menu-screen" class="screen">
+  <!-- MAIN MENU & SEO CONTENT -->
+  <!-- We keep this rich in text for Google to crawl -->
+  <main id="menu-screen" class="screen">
     <h1>REVERSED SNAKE</h1>
-    <p>You are the Apple.<br>Level = Number of Snakes.<br>Survive.</p>
+    <p class="intro-text">
+      <strong>You are the Apple.</strong> The Snakes are AI-controlled hunters. 
+      <br>Survive the swarm in this reverse twist on the classic arcade game.
+    </p>
+    
     <div class="level-grid" id="level-container">
       <!-- Buttons generated by JS -->
     </div>
-  </div>
 
-  <!-- GAME OVER SCREEN -->
+    <!-- SEO Footer: Visible text describing the game logic -->
+    <article class="seo-footer">
+      <h3>About Reversed Snake</h3>
+      <p>
+        Reversed Snake is a <strong>free HTML5 survival game</strong> where you play as the apple, avoiding snakes that use <strong>A* (A-Star) Pathfinding AI</strong>. 
+        Unlike the traditional Nokia snake game, here the roles are inverted. The snakes grow automatically over time, increasing the difficulty.
+        Test your reflexes in Level 10, the hardest snake game mode available in the browser.
+      </p>
+      <p>
+        Built with vanilla JavaScript and Canvas. Features mobile touch controls, joystick support, and high-score tracking.
+      </p>
+    </article>
+  </main>
+
   <div id="game-over-screen" class="screen hidden">
     <h2>GAME OVER</h2>
-    <p id="go-stats">Survived: 0s<br>Best: 0s</p>
+    <p id="go-stats" class="intro-text">Survived: 0s<br>Best: 0s</p>
     <div style="display:flex; gap:10px;">
       <button class="btn btn-action" onclick="retryLevel()">Retry</button>
       <button class="btn btn-action" onclick="showMainMenu()">Menu</button>
     </div>
   </div>
 
-  <!-- JOYSTICK -->
   <div id="joystick-zone">
     <div class="joystick-base"></div>
     <div class="joystick-stick" id="stick"></div>
@@ -242,7 +307,6 @@ const ctx = canvas.getContext('2d');
 const GRID_SIZE = 30;
 let CELL_SIZE = 20;
 
-// Resizing
 function resizeGame() {
   const maxWidth = window.innerWidth;
   const maxHeight = window.innerHeight;
@@ -331,11 +395,10 @@ function findPath(start, goal, currentSnake) {
     for (const dir of DIRECTIONS) {
       const next = current.add(dir);
       
-      // OPTIMIZED CHECK: O(1) Lookup instead of O(N*L) loop
       if (isBlockedFast(next.x, next.y)) continue;
 
       const nextKey = (next.y * GRID_SIZE + next.x);
-      const newCost = cost.get(startKey) + 1; // Simplified cost
+      const newCost = cost.get(startKey) + 1; 
       
       if (!cost.has(nextKey) || newCost < cost.get(nextKey)) {
         cost.set(nextKey, newCost);
@@ -364,7 +427,6 @@ class Snake {
   grow() { this.growing = true; }
 }
 
-// --- STATE MANAGEMENT ---
 const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2 };
 const game = {
   state: STATE.MENU,
@@ -381,7 +443,6 @@ const game = {
   growInterval: null
 };
 
-// --- HIGH SCORE SYSTEM ---
 function getHighScore(lvl) {
   try { return localStorage.getItem(`revSnake_HS_${lvl}`) || 0; } catch(e) { return 0; }
 }
@@ -389,7 +450,6 @@ function setHighScore(lvl, score) {
   try { localStorage.setItem(`revSnake_HS_${lvl}`, score); } catch(e) {}
 }
 
-// --- INITIALIZATION ---
 function generateMenu() {
   const container = document.getElementById('level-container');
   container.innerHTML = '';
@@ -412,9 +472,8 @@ function showMainMenu() {
   generateMenu(); 
 }
 
-// --- LOOP VARIABLES ---
 let animFrameId;
-let lastTime = 0; // Global time tracker
+let lastTime = 0;
 
 function startLevel(lvl) {
   game.level = lvl;
@@ -425,7 +484,6 @@ function startLevel(lvl) {
   game.lastSnake = 0;
   game.lastApple = 0;
   
-  // RESET TIME to prevent huge negative deltas
   lastTime = 0;
   if (animFrameId) cancelAnimationFrame(animFrameId);
   
@@ -456,7 +514,6 @@ function retryLevel() {
   startLevel(game.level);
 }
 
-// --- GAME LOGIC ---
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
 window.addEventListener('keydown', e => { 
@@ -487,7 +544,6 @@ function gameOverFunc() {
   document.getElementById('joystick-zone').style.display = 'none';
 }
 
-// --- RENDER ---
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
@@ -536,7 +592,6 @@ function draw() {
   if (glitching) ctx.restore();
 }
 
-// --- LOOP ---
 function loop(t) {
   if (game.state !== STATE.PLAYING && game.state !== STATE.GAMEOVER) return; 
   animFrameId = requestAnimationFrame(loop);
@@ -553,22 +608,16 @@ function loop(t) {
 
     if (game.lastSnake >= game.snakeSpeed) {
       let closeThreat = false;
-
-      // 1. Build Grid Map ONCE per tick (O(N*L))
       buildCollisionGrid(game.snakes);
 
-      // 2. Process each snake
       for (let i = 0; i < game.snakes.length; i++) {
         const s = game.snakes[i];
-        
-        // 3. A* using Grid Map (O(1) collision checks)
         const path = findPath(s.head, game.apple, s);
         let nextDir = null;
 
         if (path && path.length > 1) {
           nextDir = new Point(path[1].x - s.head.x, path[1].y - s.head.y);
         } else {
-          // Fallback: Greedy
           const candidates = DIRECTIONS.filter(d => {
             const np = s.head.add(d);
             return !isBlockedFast(np.x, np.y); 
@@ -581,12 +630,10 @@ function loop(t) {
 
         if (nextDir) {
           const newHead = s.head.add(nextDir);
-          
           if (newHead.equals(game.apple)) {
             gameOverFunc();
             return;
           }
-
           s.body.unshift(newHead);
           if (!s.growing) s.body.pop();
           else s.growing = false;
@@ -596,7 +643,7 @@ function loop(t) {
       }
       
       if (closeThreat) game.glitchStart = Date.now();
-      game.lastSnake -= game.snakeSpeed; // Subtract correctly to maintain pace
+      game.lastSnake -= game.snakeSpeed; 
     }
 
     if (game.lastApple >= game.appleSpeed) {
@@ -604,7 +651,6 @@ function loop(t) {
       if (dir) {
         const np = game.apple.add(dir);
         if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE) {
-           // Simple collision check for player against map is sufficient
            if (!isBlockedFast(np.x, np.y)) {
               game.apple = np;
            }
@@ -616,7 +662,6 @@ function loop(t) {
   draw();
 }
 
-// --- JOYSTICK LOGIC ---
 const joystickZone = document.querySelector('.joystick-base');
 const stick = document.getElementById('stick');
 let jActive = false;

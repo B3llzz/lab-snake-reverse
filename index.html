@@ -15,7 +15,7 @@
     height: 100vh; 
     color: #fff;
     font-family: monospace;
-    overflow: hidden; /* Prevent scroll on mobile */
+    overflow: hidden; 
   }
 
   #game-container {
@@ -25,7 +25,7 @@
 
   canvas { 
     background: #111; 
-    border: 2px solid #333; /* Visible area limit */
+    border: 2px solid #333; 
     display: block;
     image-rendering: pixelated; 
     max-width: 100vw;
@@ -81,7 +81,7 @@ const GITHUB_REPO = "ImBIOS/lab-snake-reverse";
 const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 document.getElementById('gh-link').href = GITHUB_URL;
 
-// Fetch stars
+// Fetch stars (Async - won't block game)
 fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
   .then(res => res.json())
   .then(data => {
@@ -89,7 +89,7 @@ fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
       document.getElementById('star-count').innerText = data.stargazers_count;
     }
   })
-  .catch(e => console.log("Repo not found or API limit hit"));
+  .catch(e => console.log("Repo info skipped"));
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -179,13 +179,20 @@ const game = {
   glitchStart: 0,
   gameOver: false,
   survived: 0,
-  highScore: localStorage.getItem('reversedSnakeHighScore') || 0,
+  highScore: 0,
   snakeSpeed: 140,
   appleSpeed: 100,
   lastSnake: 0,
   lastApple: 0,
   growInterval: null
 };
+
+// SAFE LOCAL STORAGE LOADING
+try {
+  game.highScore = localStorage.getItem('reversedSnakeHighScore') || 0;
+} catch(e) {
+  console.log("Local Storage blocked, high score disabled");
+}
 
 function initApple() {
   let pos;
@@ -194,6 +201,9 @@ function initApple() {
   } while (game.snake.body.some(s => s.equals(pos)));
   game.apple = pos;
 }
+
+let animFrameId = null;
+let lastTime = 0;
 
 function resetGame() {
   game.snake = new Snake();
@@ -206,22 +216,21 @@ function resetGame() {
   if (game.growInterval) clearInterval(game.growInterval);
   initApple();
   game.growInterval = setInterval(() => game.snake.grow(), 5000);
-  loop(0); 
-}
 
-// Initial Start
-resetGame();
+  // Restart Loop safely
+  if (animFrameId) cancelAnimationFrame(animFrameId);
+  lastTime = 0;
+  animFrameId = requestAnimationFrame(loop);
+}
 
 // Input Handling
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
 window.addEventListener('keydown', e => { 
-  // Prevent scrolling
   if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
       e.preventDefault();
   }
   
-  // Restart Logic
   if ((e.code === 'Space' || e.code === 'Enter') && game.gameOver) {
     resetGame();
     return;
@@ -239,26 +248,20 @@ let touchStartY = 0;
 canvas.addEventListener('touchstart', function(e) {
   touchStartX = e.changedTouches[0].screenX;
   touchStartY = e.changedTouches[0].screenY;
-  // Restart on tap if game over
   if (game.gameOver) { resetGame(); }
 }, {passive: false});
 
 canvas.addEventListener('touchmove', function(e) {
-  // Prevent browser scrolling/pull-to-refresh
   e.preventDefault();
-  
   const touchEndX = e.changedTouches[0].screenX;
   const touchEndY = e.changedTouches[0].screenY;
-  
   const dx = touchEndX - touchStartX;
   const dy = touchEndY - touchStartY;
   
-  // Reset keys
   Object.keys(keys).forEach(k => keys[k] = false);
   
-  // Determine swipe direction
   if (Math.abs(dx) > Math.abs(dy)) {
-    if (Math.abs(dx) > 10) { // Threshold
+    if (Math.abs(dx) > 10) { 
       if (dx > 0) keys.ArrowRight = true;
       else keys.ArrowLeft = true;
     }
@@ -271,9 +274,6 @@ canvas.addEventListener('touchmove', function(e) {
 }, {passive: false});
 
 canvas.addEventListener('touchend', function(e) {
-  // Optional: Stop moving when finger lifts? 
-  // For now, let's keep moving in last direction like a joystick release, or stop.
-  // Let's stop for precise control.
   Object.keys(keys).forEach(k => keys[k] = false);
 });
 
@@ -297,10 +297,11 @@ function gameOverFunc() {
   clearInterval(game.growInterval);
   game.survived = (Date.now() - game.startTime) / 1000;
   
-  // Update High Score
   if (game.survived > game.highScore) {
     game.highScore = game.survived;
-    localStorage.setItem('reversedSnakeHighScore', game.highScore);
+    try {
+      localStorage.setItem('reversedSnakeHighScore', game.highScore);
+    } catch(e) {}
   }
 }
 
@@ -318,7 +319,7 @@ function draw() {
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Subtle grid for visual limit
+  // Subtle grid
   ctx.strokeStyle = '#1a1a1a';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -329,10 +330,12 @@ function draw() {
   ctx.stroke();
 
   // snake
-  game.snake.body.forEach((seg, i) => {
-    ctx.fillStyle = i === 0 ? '#0ff' : '#0a0';
-    ctx.fillRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-  });
+  if (game.snake) {
+    game.snake.body.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? '#0ff' : '#0a0';
+      ctx.fillRect(seg.x * CELL_SIZE + 2, seg.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+    });
+  }
 
   // apple
   if (game.apple) {
@@ -345,10 +348,11 @@ function draw() {
   // UI
   const time = game.gameOver ? game.survived : (Date.now() - game.startTime) / 1000;
   ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left'; // Reset alignment
   ctx.font = '20px monospace';
   ctx.fillText(`Time: ${time.toFixed(1)}s`, 10, 30);
   ctx.fillText(`High Score: ${Number(game.highScore).toFixed(1)}s`, 10, 60);
-  ctx.fillText(`Length: ${game.snake.body.length}`, 10, 90);
+  ctx.fillText(`Length: ${game.snake ? game.snake.body.length : 0}`, 10, 90);
 
   if (game.gameOver) {
     ctx.save();
@@ -376,9 +380,10 @@ function draw() {
   if (glitching) ctx.restore();
 }
 
-let lastTime = 0;
 function loop(t) {
-  if (!lastTime) lastTime = t;
+  animFrameId = requestAnimationFrame(loop);
+  
+  if (!lastTime) { lastTime = t; return; }
   const delta = t - lastTime;
   lastTime = t;
 
@@ -394,10 +399,9 @@ function loop(t) {
       if (path && path.length > 1) {
         nextDir = new Point(path[1].x - game.snake.head.x, path[1].y - game.snake.head.y);
       } else {
-        // trapped -> shrink if stuck
+        // Trapped logic
         if (game.snake.body.length > 8) game.snake.body.pop();
 
-        // greedy closest move fallback
         const candidates = DIRECTIONS.filter(d => {
           const np = game.snake.head.add(d);
           if (np.x < 0 || np.x >= GRID_SIZE || np.y < 0 || np.y >= GRID_SIZE) return false;
@@ -439,8 +443,10 @@ function loop(t) {
   }
 
   draw();
-  requestAnimationFrame(loop);
 }
+
+// Start Game
+resetGame();
 </script>
 </body>
 </html>

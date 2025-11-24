@@ -67,12 +67,4 @@ cd lab-snake-reverse
 open index.html
 ```
 
-## **🤝 Contributing**
-
-Contributions are welcome\! If you have ideas for new levels, skins, or algorithm improvements, feel free to open an issue or pull request.
-
-## **📄 License**
-
-This project is open source and available under the [MIT License](./LICENSE).
-
 *Keywords: Reversed Snake, Play as Apple, Snake Game AI, Hard Snake Game, A\* Algorithm Game, Browser Game, HTML5 Game, Survival Game, JavaScript Game Project, Open Source Game.*

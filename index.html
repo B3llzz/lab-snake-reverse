@@ -181,7 +181,7 @@
       <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
     </svg>
     <span>Star</span>
-    <span id="star-count" class="star-count">1.4k</span> <!-- Placeholder count -->
+    <span id="star-count" class="star-count">...</span> 
   </a>
 
   <!-- HUD -->
@@ -220,6 +220,21 @@
 // --- CONFIGURATION ---
 const GITHUB_REPO = "ImBIOS/lab-snake-reverse"; 
 document.getElementById('gh-link').href = `https://github.com/${GITHUB_REPO}`;
+
+// Fetch stars
+fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
+  .then(res => res.json())
+  .then(data => {
+    if(data.stargazers_count !== undefined) {
+      document.getElementById('star-count').innerText = formatCount(data.stargazers_count);
+    }
+  })
+  .catch(e => console.log("Repo info skipped"));
+
+function formatCount(count) {
+  if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+  return count;
+}
 
 // --- ENGINE SETUP ---
 const canvas = document.getElementById('c');
@@ -296,10 +311,6 @@ function findPath(start, goal, currentSnake) {
   let iterations = 0;
   // Reduced iterations to ensure frame rate stability with multiple snakes
   const MAX_ITERATIONS = 200; 
-
-  // Temporarily unmark OWN tail so we can follow it (standard Snake logic)
-  // Optimization: Just ignoring this makes AI slightly dumber but way faster. 
-  // We will stick to strict blocked checks for Level 10 performance.
 
   while (!pq.isEmpty()) {
     iterations++;
@@ -401,6 +412,10 @@ function showMainMenu() {
   generateMenu(); 
 }
 
+// --- LOOP VARIABLES ---
+let animFrameId;
+let lastTime = 0; // Global time tracker
+
 function startLevel(lvl) {
   game.level = lvl;
   game.state = STATE.PLAYING;
@@ -409,6 +424,10 @@ function startLevel(lvl) {
   game.snakes = [];
   game.lastSnake = 0;
   game.lastApple = 0;
+  
+  // RESET TIME to prevent huge negative deltas
+  lastTime = 0;
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   
   document.getElementById('menu-screen').classList.add('hidden');
   document.getElementById('game-over-screen').classList.add('hidden');
@@ -518,9 +537,6 @@ function draw() {
 }
 
 // --- LOOP ---
-let animFrameId;
-let lastTime = 0;
-
 function loop(t) {
   if (game.state !== STATE.PLAYING && game.state !== STATE.GAMEOVER) return; 
   animFrameId = requestAnimationFrame(loop);
@@ -529,8 +545,6 @@ function loop(t) {
   let delta = t - lastTime;
   lastTime = t;
 
-  // LAG PREVENTION: Cap delta to prevent spiral of death
-  // If browser hangs for 1s, don't try to simulate 1s of gameplay instantly
   if (delta > 200) delta = 200; 
 
   if (game.state === STATE.PLAYING) {

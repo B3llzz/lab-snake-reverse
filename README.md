@@ -62,7 +62,7 @@ No build steps required.
 
 ```bash
 # Clone the repository
-git clone [https://github.com/ImBIOS/lab-snake-reverse.git](https://github.com/ImBIOS/lab-snake-reverse.git)
+git clone https://github.com/ImBIOS/lab-snake-reverse.git
 
 # Navigate to the directory
 cd lab-snake-reverse

@@ -3,49 +3,109 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Reversed Snake - Mobile</title>
+<title>Reversed Snake: The Swarm</title>
 <style>
+  :root {
+    --bg-color: #050505;
+    --term-green: #0f0;
+    --term-red: #f33;
+    --ui-bg: rgba(10, 10, 10, 0.95);
+  }
+
   body { 
     margin: 0; 
-    background: #050505; 
+    background: var(--bg-color); 
     display: flex; 
-    flex-direction: column;
     justify-content: center; 
     align-items: center; 
     height: 100vh; 
     color: #fff;
-    font-family: monospace;
+    font-family: 'Courier New', Courier, monospace;
     overflow: hidden; 
-    touch-action: none; /* Prevent browser zooming/scrolling */
+    touch-action: none; 
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   #game-wrapper {
     position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    height: 100%;
   }
 
   canvas { 
     background: #111; 
     border: 2px solid #333; 
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.05);
     image-rendering: pixelated; 
     display: block;
   }
 
-  /* --- UI ELEMENTS --- */
-  .ui-layer {
+  /* --- UI OVERLAYS --- */
+  .screen {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none; /* Let clicks pass through to game */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--ui-bg);
+    z-index: 20;
+    transition: opacity 0.3s;
   }
 
+  .hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+  h1 { font-size: 2.5rem; text-shadow: 0 0 10px var(--term-green); color: var(--term-green); margin-bottom: 10px; text-align: center; }
+  h2 { font-size: 2rem; color: var(--term-red); text-shadow: 0 0 10px var(--term-red); margin: 0 0 20px 0; }
+  p { margin: 5px 0 20px 0; color: #aaa; text-align: center; max-width: 300px; line-height: 1.4; }
+
+  /* Level Grid */
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    max-width: 300px;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  .btn:active { transform: scale(0.95); }
+  .btn:hover { background: #222; border-color: var(--term-green); color: var(--term-green); box-shadow: 0 0 10px rgba(0,255,0,0.2); }
+  
+  .btn-lvl { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+  .btn-lvl small { font-size: 0.6em; color: #666; margin-top: 4px; }
+  
+  .btn-action { margin-top: 10px; min-width: 150px; border-color: #666; background: #111; }
+  .btn-action:hover { border-color: #fff; color: #fff; }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 10px; left: 10px;
+    pointer-events: none;
+    z-index: 10;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  /* GitHub Button */
   .github-btn {
     position: absolute;
-    top: max(10px, env(safe-area-inset-top)); /* Notch support */
+    top: max(10px, env(safe-area-inset-top));
     right: 10px;
     display: flex;
     align-items: center;
@@ -57,46 +117,40 @@
     font-size: 12px;
     font-weight: bold;
     border: 1px solid #444;
-    pointer-events: auto;
+    z-index: 30;
     backdrop-filter: blur(4px);
   }
   .github-icon { width: 16px; height: 16px; fill: white; margin-right: 6px; }
-  
-  /* --- VIRTUAL JOYSTICK --- */
+
+  /* Joystick */
   #joystick-zone {
-    display: none; /* Hidden on desktop */
+    display: none;
     position: absolute;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    width: 140px;
-    height: 140px;
-    z-index: 100;
+    width: 140px; height: 140px;
+    z-index: 15;
   }
   
   .joystick-base {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    position: absolute; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    pointer-events: auto; /* Catch touches */
+    pointer-events: auto;
   }
 
   .joystick-stick {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 50px;
-    height: 50px;
-    margin-top: -25px;
-    margin-left: -25px;
-    background: rgba(0, 255, 255, 0.5);
+    position: absolute; top: 50%; left: 50%;
+    width: 50px; height: 50px;
+    margin-top: -25px; margin-left: -25px;
+    background: rgba(0, 255, 255, 0.3);
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
     transition: transform 0.1s;
     pointer-events: none;
   }
+
 </style>
 </head>
 <body>
@@ -104,16 +158,40 @@
 <div id="game-wrapper">
   <canvas id="c"></canvas>
 
-  <div class="ui-layer">
-    <a href="#" target="_blank" id="gh-link" class="github-btn">
-      <svg class="github-icon" viewBox="0 0 16 16">
-        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
-      </svg>
-      <span>GitHub</span>
-      <span id="star-count" style="margin-left:5px"></span>
-    </a>
+  <!-- GitHub Link -->
+  <a href="#" target="_blank" id="gh-link" class="github-btn">
+    <svg class="github-icon" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+    </svg>
+    <span>GitHub</span>
+  </a>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-level">LVL 1</div>
+    <div id="hud-time">0.0s</div>
   </div>
 
+  <!-- MAIN MENU -->
+  <div id="menu-screen" class="screen">
+    <h1>REVERSED SNAKE</h1>
+    <p>You are the Apple.<br>Level = Number of Snakes.<br>Survive.</p>
+    <div class="level-grid" id="level-container">
+      <!-- Buttons generated by JS -->
+    </div>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div id="game-over-screen" class="screen hidden">
+    <h2>GAME OVER</h2>
+    <p id="go-stats">Survived: 0s<br>Best: 0s</p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-action" onclick="retryLevel()">Retry</button>
+      <button class="btn btn-action" onclick="showMainMenu()">Menu</button>
+    </div>
+  </div>
+
+  <!-- JOYSTICK -->
   <div id="joystick-zone">
     <div class="joystick-base"></div>
     <div class="joystick-stick" id="stick"></div>
@@ -125,42 +203,29 @@
 const GITHUB_REPO = "ImBIOS/lab-snake-reverse"; 
 document.getElementById('gh-link').href = `https://github.com/${GITHUB_REPO}`;
 
-// Fetch stars
-fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
-  .then(res => res.json())
-  .then(data => { if(data.stargazers_count) document.getElementById('star-count').innerText = data.stargazers_count; })
-  .catch(() => {});
-
-// --- GAME SETUP ---
+// --- ENGINE SETUP ---
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const GRID_SIZE = 30; // 30x30 Grid logic remains constant
-let CELL_SIZE = 20;   // Calculated dynamically
+const GRID_SIZE = 30;
+let CELL_SIZE = 20;
 
-// --- RESPONSIVE RESIZING ---
+// Resizing
 function resizeGame() {
   const maxWidth = window.innerWidth;
   const maxHeight = window.innerHeight;
-  
-  // Reserve some space for UI/Joystick
   const isMobile = maxWidth < 768;
   const availableHeight = isMobile ? maxHeight * 0.70 : maxHeight * 0.95;
   const availableWidth = maxWidth * 0.95;
-
   const size = Math.min(availableWidth, availableHeight);
-  
-  // Ensure size aligns with grid to avoid blurring
   const adjustedSize = Math.floor(size / GRID_SIZE) * GRID_SIZE;
-  
   canvas.width = adjustedSize;
   canvas.height = adjustedSize;
   CELL_SIZE = canvas.width / GRID_SIZE;
 }
-
 window.addEventListener('resize', resizeGame);
-resizeGame(); // Initial call
+resizeGame();
 
-// --- CLASSES ---
+// --- DATA STRUCTURES ---
 class Point {
   constructor(x, y) { this.x = x; this.y = y; }
   add(p) { return new Point(this.x + p.x, this.y + p.y); }
@@ -168,7 +233,7 @@ class Point {
   manhattan(p) { return Math.abs(this.x - p.x) + Math.abs(this.y - p.y); }
 }
 
-const DIRECTIONS = [ new Point(0, -1), new Point(1, 0), new Point(0, 1), new Point(-1, 0) ];
+const DIRECTIONS = [new Point(0, -1), new Point(1, 0), new Point(0, 1), new Point(-1, 0)];
 
 class PriorityQueue {
   constructor() { this.elements = []; }
@@ -180,7 +245,18 @@ class PriorityQueue {
   isEmpty() { return this.elements.length === 0; }
 }
 
-function findPath(start, goal, snake) {
+// Check if a point is blocked by ANY snake or walls
+function isBlocked(p, snakes) {
+  if (p.x < 0 || p.x >= GRID_SIZE || p.y < 0 || p.y >= GRID_SIZE) return true;
+  // Check all snakes
+  for (let s of snakes) {
+    // Treat body as wall
+    if (s.body.some(bp => bp.equals(p) && !bp.equals(s.tail))) return true;
+  }
+  return false;
+}
+
+function findPath(start, goal, currentSnake, allSnakes) {
   const heuristic = p => p.manhattan(goal);
   const pq = new PriorityQueue();
   const cameFrom = new Map();
@@ -191,7 +267,14 @@ function findPath(start, goal, snake) {
   cameFrom.set(startKey, null);
   cost.set(startKey, 0);
 
+  let iterations = 0;
+  // Optimization: Limit A* depth for performance with 10 snakes
+  const MAX_ITERATIONS = 400; 
+
   while (!pq.isEmpty()) {
+    iterations++;
+    if (iterations > MAX_ITERATIONS) break; // Fallback if path too complex
+
     const current = pq.dequeue();
     if (current.equals(goal)) {
       const path = [];
@@ -202,9 +285,22 @@ function findPath(start, goal, snake) {
 
     for (const dir of DIRECTIONS) {
       const next = current.add(dir);
+      
+      // Collision Check
       if (next.x < 0 || next.x >= GRID_SIZE || next.y < 0 || next.y >= GRID_SIZE) continue;
-      const tail = snake.body[snake.body.length - 1];
-      if (snake.body.some(s => s.equals(next)) && !next.equals(tail)) continue;
+      
+      let blocked = false;
+      // Check against ALL snakes
+      for (let s of allSnakes) {
+        // Allow moving into OWN tail (it will move)
+        // Treat OTHER snakes as solid walls
+        const ignoreTail = (s === currentSnake);
+        if (s.body.some(bp => bp.equals(next) && (ignoreTail ? !bp.equals(s.tail) : true))) {
+          blocked = true;
+          break;
+        }
+      }
+      if (blocked) continue;
 
       const newCost = cost.get(`${current.x},${current.y}`) + 1;
       const key = `${next.x},${next.y}`;
@@ -215,31 +311,38 @@ function findPath(start, goal, snake) {
       }
     }
   }
-  return null;
+  return null; // No path found
 }
 
 class Snake {
-  constructor() {
+  constructor(index) {
     this.body = [];
+    this.color = index === 0 ? '#0f0' : (index % 2 === 0 ? '#0c0' : '#0a0'); // Slight color var
+    this.growing = false;
+    // Spawn logic to avoid stacking (simple offset)
     const cx = Math.floor(GRID_SIZE / 2);
     const cy = Math.floor(GRID_SIZE / 2);
-    for (let i = 0; i < 12; i++) this.body.push(new Point(cx + i, cy));
-    this.growing = false;
+    // Spread start positions
+    const startX = Math.max(2, Math.min(GRID_SIZE-2, cx + (Math.floor(Math.random()*10) - 5)));
+    const startY = Math.max(2, Math.min(GRID_SIZE-2, cy + (Math.floor(Math.random()*10) - 5)));
+    
+    for (let i = 0; i < 8; i++) this.body.push(new Point(startX, startY));
   }
   get head() { return this.body[0]; }
   get tail() { return this.body[this.body.length - 1]; }
   grow() { this.growing = true; }
 }
 
-// --- STATE ---
+// --- STATE MANAGEMENT ---
+const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2 };
 const game = {
-  snake: null,
+  state: STATE.MENU,
+  level: 1,
+  snakes: [],
   apple: null,
   startTime: 0,
-  glitchStart: 0,
-  gameOver: false,
   survived: 0,
-  highScore: 0,
+  glitchStart: 0,
   snakeSpeed: 140,
   appleSpeed: 100,
   lastSnake: 0,
@@ -247,137 +350,116 @@ const game = {
   growInterval: null
 };
 
-// Safe LocalStorage
-try { game.highScore = localStorage.getItem('revSnakeHS') || 0; } catch(e) {}
-
-function initApple() {
-  let pos;
-  do {
-    pos = new Point(Math.floor(Math.random() * GRID_SIZE), Math.floor(Math.random() * GRID_SIZE));
-  } while (game.snake.body.some(s => s.equals(pos)));
-  game.apple = pos;
+// --- HIGH SCORE SYSTEM ---
+function getHighScore(lvl) {
+  try { return localStorage.getItem(`revSnake_HS_${lvl}`) || 0; } catch(e) { return 0; }
+}
+function setHighScore(lvl, score) {
+  try { localStorage.setItem(`revSnake_HS_${lvl}`, score); } catch(e) {}
 }
 
-let animFrameId;
-let lastTime = 0;
+// --- INITIALIZATION ---
+function generateMenu() {
+  const container = document.getElementById('level-container');
+  container.innerHTML = '';
+  for(let i=1; i<=10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-lvl';
+    const hs = parseFloat(getHighScore(i)).toFixed(1);
+    btn.innerHTML = `LVL ${i}<small>BEST: ${hs}s</small>`;
+    btn.onclick = () => startLevel(i);
+    container.appendChild(btn);
+  }
+}
 
-function resetGame() {
-  game.snake = new Snake();
-  game.gameOver = false;
+function showMainMenu() {
+  game.state = STATE.MENU;
+  document.getElementById('menu-screen').classList.remove('hidden');
+  document.getElementById('game-over-screen').classList.add('hidden');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('joystick-zone').style.display = 'none'; // Hide joystick in menu
+  generateMenu(); // Update scores
+}
+
+function startLevel(lvl) {
+  game.level = lvl;
+  game.state = STATE.PLAYING;
   game.startTime = Date.now();
   game.survived = 0;
+  game.snakes = [];
   game.lastSnake = 0;
   game.lastApple = 0;
-  if (game.growInterval) clearInterval(game.growInterval);
-  initApple();
-  game.growInterval = setInterval(() => game.snake.grow(), 5000);
   
-  if (animFrameId) cancelAnimationFrame(animFrameId);
-  lastTime = 0;
-  animFrameId = requestAnimationFrame(loop);
+  // UI
+  document.getElementById('menu-screen').classList.add('hidden');
+  document.getElementById('game-over-screen').classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('hud-level').innerText = `LVL ${lvl}`;
+  
+  // Joystick visibility check
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    document.getElementById('joystick-zone').style.display = 'block';
+  }
+
+  // Create Player (Apple) First
+  game.apple = new Point(Math.floor(Math.random() * GRID_SIZE), Math.floor(Math.random() * GRID_SIZE));
+
+  // Create Snakes based on Level
+  for(let i=0; i<lvl; i++) {
+    game.snakes.push(new Snake(i));
+  }
+
+  // Clear timers
+  if (game.growInterval) clearInterval(game.growInterval);
+  game.growInterval = setInterval(() => {
+    game.snakes.forEach(s => s.grow());
+  }, 5000); // Snakes grow every 5s
+
+  loop(0);
 }
 
-// --- INPUTS & JOYSTICK ---
+function retryLevel() {
+  startLevel(game.level);
+}
+
+// --- GAME LOGIC ---
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
 window.addEventListener('keydown', e => { 
   if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
-  if ((e.code === 'Space' || e.code === 'Enter') && game.gameOver) resetGame();
   if (e.key in keys) keys[e.key] = true; 
 });
 window.addEventListener('keyup', e => { if (e.key in keys) keys[e.key] = false; });
 
-// Detect Touch Device
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-  document.getElementById('joystick-zone').style.display = 'block';
-  resizeGame(); // Re-trigger resize to account for visual joystick
-}
-
-// Joystick Logic
-const joystickZone = document.querySelector('.joystick-base');
-const stick = document.getElementById('stick');
-let jActive = false;
-
-joystickZone.addEventListener('touchstart', e => {
-  e.preventDefault();
-  jActive = true;
-  handleJoystick(e.changedTouches[0]);
-  if (game.gameOver) resetGame();
-}, {passive: false});
-
-joystickZone.addEventListener('touchmove', e => {
-  if (!jActive) return;
-  e.preventDefault();
-  handleJoystick(e.changedTouches[0]);
-}, {passive: false});
-
-const endJoystick = (e) => {
-  jActive = false;
-  stick.style.transform = `translate(0px, 0px)`;
-  Object.keys(keys).forEach(k => keys[k] = false);
-};
-joystickZone.addEventListener('touchend', endJoystick);
-joystickZone.addEventListener('touchcancel', endJoystick);
-
-function handleJoystick(touch) {
-  const rect = joystickZone.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  
-  const x = touch.clientX - centerX;
-  const y = touch.clientY - centerY;
-  
-  // Visual limit
-  const dist = Math.min(35, Math.sqrt(x*x + y*y));
-  const angle = Math.atan2(y, x);
-  const moveX = Math.cos(angle) * dist;
-  const moveY = Math.sin(angle) * dist;
-  
-  stick.style.transform = `translate(${moveX}px, ${moveY}px)`;
-
-  // Input Mapping (Directional)
-  Object.keys(keys).forEach(k => keys[k] = false);
-  
-  // Deadzone of 10px
-  if (dist > 10) {
-    if (Math.abs(x) > Math.abs(y)) {
-      if (x > 0) keys.ArrowRight = true;
-      else keys.ArrowLeft = true;
-    } else {
-      if (y > 0) keys.ArrowDown = true;
-      else keys.ArrowUp = true;
-    }
-  }
-}
-
 function getInputDir() {
   let dx = 0, dy = 0;
-  if (keys.ArrowLeft) dx--;
-  if (keys.ArrowRight) dx++;
-  if (keys.ArrowUp) dy--;
-  if (keys.ArrowDown) dy++;
+  if (keys.ArrowLeft) dx--; if (keys.ArrowRight) dx++;
+  if (keys.ArrowUp) dy--; if (keys.ArrowDown) dy++;
   return (dx || dy) ? new Point(dx, dy) : null;
 }
 
-// --- LOGIC ---
-function checkClose() {
-  const min = Math.min(...game.snake.body.map(s => s.manhattan(game.apple)));
-  if (min <= 1) game.glitchStart = Date.now();
-}
-
 function gameOverFunc() {
-  game.gameOver = true;
+  game.state = STATE.GAMEOVER;
   clearInterval(game.growInterval);
   game.survived = (Date.now() - game.startTime) / 1000;
-  if (game.survived > game.highScore) {
-    game.highScore = game.survived;
-    try { localStorage.setItem('revSnakeHS', game.highScore); } catch(e){}
+  
+  // Save Score
+  const currentBest = parseFloat(getHighScore(game.level));
+  if (game.survived > currentBest) {
+    setHighScore(game.level, game.survived);
   }
+
+  // Show Screen
+  document.getElementById('go-stats').innerHTML = `Survived: ${game.survived.toFixed(1)}s<br>Best (Lvl ${game.level}): ${Math.max(game.survived, currentBest).toFixed(1)}s`;
+  document.getElementById('game-over-screen').classList.remove('hidden');
+  document.getElementById('joystick-zone').style.display = 'none';
 }
 
+// --- RENDER ---
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
+  // Glitch Effect
   const glitching = Date.now() - game.glitchStart < 700;
   if (glitching) {
     ctx.save();
@@ -385,11 +467,11 @@ function draw() {
     ctx.translate((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp);
   }
 
-  // Grid BG
+  // BG
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Faint Grid Lines
+  // Grid
   ctx.strokeStyle = '#1a1a1a';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -399,105 +481,113 @@ function draw() {
   }
   ctx.stroke();
 
-  // Draw Entities
-  if (game.snake) {
-    game.snake.body.forEach((seg, i) => {
-      ctx.fillStyle = i === 0 ? '#0ff' : '#0a0';
+  // Snakes
+  game.snakes.forEach(snake => {
+    snake.body.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? '#0ff' : snake.color; // Head is Cyan, Body Green
       ctx.fillRect(seg.x * CELL_SIZE + 1, seg.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     });
-  }
+  });
+
+  // Apple
   if (game.apple) {
     ctx.fillStyle = '#f33';
     ctx.beginPath();
     ctx.arc((game.apple.x + 0.5) * CELL_SIZE, (game.apple.y + 0.5) * CELL_SIZE, CELL_SIZE * 0.35, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  // Text UI (Scaled)
-  const fontSize = Math.max(12, Math.floor(CELL_SIZE * 0.8));
-  const time = game.gameOver ? game.survived : (Date.now() - game.startTime) / 1000;
-  
-  ctx.fillStyle = '#fff';
-  ctx.font = `${fontSize}px monospace`;
-  ctx.fillText(`Time: ${time.toFixed(1)}s`, 10, fontSize + 5);
-  ctx.fillText(`Best: ${Number(game.highScore).toFixed(1)}s`, 10, (fontSize * 2) + 10);
-
-  if (game.gameOver) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.85)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.shadowColor = "#f00";
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = '#f00';
-    ctx.textAlign = "center";
-    
-    const bigFont = Math.floor(canvas.width / 10);
-    ctx.font = `${bigFont}px monospace`;
-    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
-    
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#f33';
+    ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#fff';
-    ctx.font = `${fontSize * 1.5}px monospace`;
-    ctx.fillText(`You lasted ${time.toFixed(1)}s`, canvas.width/2, canvas.height/2 + bigFont);
-    
-    ctx.fillStyle = '#aaa';
-    ctx.font = `${fontSize}px monospace`;
-    ctx.fillText('Tap to Restart', canvas.width/2, canvas.height/2 + bigFont * 1.8);
-    ctx.restore();
   }
-  
+
+  // HUD Update
+  if (game.state === STATE.PLAYING) {
+    const t = (Date.now() - game.startTime) / 1000;
+    document.getElementById('hud-time').innerText = t.toFixed(1) + 's';
+  }
+
   if (glitching) ctx.restore();
 }
 
+// --- LOOP ---
+let animFrameId;
+let lastTime = 0;
+
 function loop(t) {
+  if (game.state !== STATE.PLAYING && game.state !== STATE.GAMEOVER) return; // Stop loop if in menu
   animFrameId = requestAnimationFrame(loop);
+  
   if (!lastTime) { lastTime = t; return; }
   const delta = t - lastTime;
   lastTime = t;
 
-  if (!game.gameOver) {
+  if (game.state === STATE.PLAYING) {
     game.lastSnake += delta;
     game.lastApple += delta;
 
+    // --- SNAKE LOGIC (SWARM) ---
     if (game.lastSnake >= game.snakeSpeed) {
-      const path = findPath(game.snake.head, game.apple, game.snake);
-      let nextDir = null;
-      if (path && path.length > 1) {
-        nextDir = new Point(path[1].x - game.snake.head.x, path[1].y - game.snake.head.y);
-      } else {
-        if (game.snake.body.length > 8) game.snake.body.pop();
-        const candidates = DIRECTIONS.filter(d => {
-          const np = game.snake.head.add(d);
-          if (np.x < 0 || np.x >= GRID_SIZE || np.y < 0 || np.y >= GRID_SIZE) return false;
-          return !game.snake.body.some(s => s.equals(np)) || np.equals(game.snake.tail);
-        });
-        if (candidates.length) {
-          candidates.sort((a, b) => game.apple.manhattan(game.snake.head.add(a)) - game.apple.manhattan(game.snake.head.add(b)));
-          nextDir = candidates[0];
-        }
-      }
+      let closeThreat = false;
 
-      if (nextDir) {
-        const newHead = game.snake.head.add(nextDir);
-        if (newHead.equals(game.apple)) gameOverFunc();
-        else {
-          game.snake.body.unshift(newHead);
-          if (!game.snake.growing) game.snake.body.pop();
-          else game.snake.growing = false;
+      // Process each snake sequentially
+      for (let i = 0; i < game.snakes.length; i++) {
+        const s = game.snakes[i];
+        
+        // Find path considering ALL snakes as obstacles
+        const path = findPath(s.head, game.apple, s, game.snakes);
+        let nextDir = null;
+
+        if (path && path.length > 1) {
+          nextDir = new Point(path[1].x - s.head.x, path[1].y - s.head.y);
+        } else {
+          // Fallback: Greedy
+          const candidates = DIRECTIONS.filter(d => {
+            const np = s.head.add(d);
+            return !isBlocked(np, game.snakes); // Use global block check
+          });
+          if (candidates.length) {
+            candidates.sort((a, b) => game.apple.manhattan(s.head.add(a)) - game.apple.manhattan(s.head.add(b)));
+            nextDir = candidates[0];
+          }
         }
+
+        if (nextDir) {
+          const newHead = s.head.add(nextDir);
+          
+          // Collision with Player
+          if (newHead.equals(game.apple)) {
+            gameOverFunc();
+            return;
+          }
+
+          // Move
+          s.body.unshift(newHead);
+          if (!s.growing) s.body.pop();
+          else s.growing = false;
+        }
+
+        // Check proximity for glitch effect
+        if (s.head.manhattan(game.apple) <= 2) closeThreat = true;
       }
-      game.lastSnake -= game.snakeSpeed;
-      checkClose();
+      
+      if (closeThreat) game.glitchStart = Date.now();
+      game.lastSnake = 0; // Reset tick
     }
 
+    // --- PLAYER LOGIC ---
     if (game.lastApple >= game.appleSpeed) {
       const dir = getInputDir();
       if (dir) {
         const np = game.apple.add(dir);
-        if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE && !game.snake.body.some(s => s.equals(np))) {
-          game.apple = np;
-          checkClose();
+        // Valid Move Check
+        if (np.x >= 0 && np.x < GRID_SIZE && np.y >= 0 && np.y < GRID_SIZE) {
+           // Don't run into snakes
+           let suicide = false;
+           for(let s of game.snakes) {
+             if (s.body.some(bp => bp.equals(np))) suicide = true;
+           }
+           if(!suicide) game.apple = np;
         }
       }
       game.lastApple -= game.appleSpeed;
@@ -506,7 +596,37 @@ function loop(t) {
   draw();
 }
 
-resetGame();
+// --- JOYSTICK LOGIC ---
+const joystickZone = document.querySelector('.joystick-base');
+const stick = document.getElementById('stick');
+let jActive = false;
+
+joystickZone.addEventListener('touchstart', e => { e.preventDefault(); jActive = true; handleJoystick(e.changedTouches[0]); }, {passive: false});
+joystickZone.addEventListener('touchmove', e => { if (!jActive) return; e.preventDefault(); handleJoystick(e.changedTouches[0]); }, {passive: false});
+
+const endJoystick = () => { jActive = false; stick.style.transform = `translate(0px, 0px)`; Object.keys(keys).forEach(k => keys[k] = false); };
+joystickZone.addEventListener('touchend', endJoystick);
+joystickZone.addEventListener('touchcancel', endJoystick);
+
+function handleJoystick(touch) {
+  const rect = joystickZone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const x = touch.clientX - centerX;
+  const y = touch.clientY - centerY;
+  const dist = Math.min(35, Math.sqrt(x*x + y*y));
+  const angle = Math.atan2(y, x);
+  stick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+
+  Object.keys(keys).forEach(k => keys[k] = false);
+  if (dist > 10) {
+    if (Math.abs(x) > Math.abs(y)) { keys[x > 0 ? 'ArrowRight' : 'ArrowLeft'] = true; } 
+    else { keys[y > 0 ? 'ArrowDown' : 'ArrowUp'] = true; }
+  }
+}
+
+// Start
+showMainMenu();
 </script>
 </body>
 </html>

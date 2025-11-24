@@ -25,7 +25,7 @@ Instead of guiding the snake, you play as the **Apple**. The Snake is controlled
 1.  **Download** the `index.html` file (or clone this repo).
 2.  **Open** the file in any modern web browser.
 3.  **Controls:** Use your **Arrow Keys** (⬆️ ⬇️ ⬅️ ➡️) to move the Red Apple.
-4.  **Objective:** Survive as long as possible. Do not let the Snake head touch you.
+4.  **Objective:** Survive as long as possible. Do not let the Snake's head touch you.
 
 **Strategy Tip:** You are slightly faster than the snake (100ms move speed vs 140ms). Use your speed to bait the snake into knots, but don't get cornered!
 
@@ -42,3 +42,35 @@ function findPath(start, goal, snake) {
   const heuristic = p => p.manhattan(goal);
   // ... implementation of A* loop
 }
+````
+
+### The Glitch Effect
+
+The game creates a nervous atmosphere using `canvas.translate` offsets when the danger level is high:
+
+```javascript
+const glitching = Date.now() - game.glitchStart < 700;
+if (glitching) {
+    const amp = 20; // Shake amplitude
+    ctx.translate((Math.random() - 0.5) * amp, ...);
+}
+```
+
+## 🚀 Installation & Usage
+
+No build steps required.
+
+```bash
+# Clone the repository
+git clone [https://github.com/ImBIOS/lab-snake-reverse.git](https://github.com/ImBIOS/lab-snake-reverse.git)
+
+# Navigate to the directory
+cd lab-snake-reverse
+
+# Open in browser (Mac example)
+open index.html
+```
+
+## 🤝 Contributing
+
+Feel free to fork the project and submit a pull request\!

